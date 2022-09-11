@@ -40,6 +40,80 @@
  */
 
 /**
+ * thrust acceleration max
+ *
+ * thrust acceleration max
+ *
+ * @min 10.0
+ * @max 30.0
+ * @decimal 3
+ * @increment 0.01
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_TH_ACC_MAX, 20.0f);
+
+/**
+ * thrust acceleration min
+ *
+ * thrust acceleration min
+ *
+ * @min 0.1
+ * @max 10.0
+ * @decimal 3
+ * @increment 0.01
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_TH_ACC_MIN, 0.1f);
+
+/**
+ * thrust P gain
+ *
+ * thrust control proportional gain
+ *
+ * @min 0.01
+ * @max 0.1
+ * @decimal 3
+ * @increment 0.01
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_THRUST_P, 0.01f);
+
+/**
+ * Thrust I gain
+ *
+ * Thrust integral gain. Can be set to compensate static thrust difference or gravity center offset.
+ *
+ * @min 0.0
+ * @decimal 3
+ * @increment 0.01
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_THRUST_I, 0.2f);
+
+/**
+ * Thrust integrator limit
+ *
+ * thrust integrator limit.
+ *
+ * @min 0.0
+ * @decimal 2
+ * @increment 0.01
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_TH_INT_LIM, 0.30f);
+
+/**
+ * Thrust feedforward
+ *
+ * Improves tracking performance.
+ *
+ * @min 0.0
+ * @decimal 4
+ * @group Multicopter Rate Control
+ */
+PARAM_DEFINE_FLOAT(MC_THRUST_FF, 0.045f);
+
+/**
  * Roll rate P gain
  *
  * Roll rate proportional gain, i.e. control output for angular speed error 1 rad/s.

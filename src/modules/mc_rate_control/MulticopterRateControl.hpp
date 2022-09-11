@@ -34,6 +34,7 @@
 #pragma once
 
 #include <RateControl.hpp>
+#include <ThrustControl.hpp>
 
 #include <lib/matrix/matrix/math.hpp>
 #include <lib/perf/perf_counter.h>
@@ -59,6 +60,8 @@
 #include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
+#include <uORB/topics/vehicle_acceleration.h>
+#include <uORB/topics/quadrotor_control_input.h>
 
 using namespace time_literals;
 
@@ -88,6 +91,7 @@ private:
 	void		parameters_updated();
 
 	RateControl _rate_control; ///< class for rate control calculations
+	ThrustControl _thrust_control;
 
 	uORB::Subscription _battery_status_sub{ORB_ID(battery_status)};
 	uORB::Subscription _landing_gear_sub{ORB_ID(landing_gear)};
@@ -98,6 +102,8 @@ private:
 	uORB::Subscription _vehicle_angular_acceleration_sub{ORB_ID(vehicle_angular_acceleration)};
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};
+	uORB::Subscription _vehicle_acceleration_sub{ORB_ID(vehicle_acceleration)};
+	uORB::Subscription _quadrotor_control_input_sub{ORB_ID(quadrotor_control_input)};
 
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
 
@@ -121,12 +127,20 @@ private:
 	matrix::Vector3f _rates_sp;			/**< angular rates setpoint */
 
 	float		_thrust_sp{0.0f};		/**< thrust setpoint */
+	float           _thrust_accel_est = 0.f;
 
 	hrt_abstime _last_run{0};
 
 	int8_t _landing_gear{landing_gear_s::GEAR_DOWN};
 
 	DEFINE_PARAMETERS(
+		(ParamFloat<px4::params::MC_TH_ACC_MAX>) _param_mc_th_acc_max,
+		(ParamFloat<px4::params::MC_TH_ACC_MIN>) _param_mc_th_acc_min,
+		(ParamFloat<px4::params::MC_THRUST_P>) _param_mc_thrust_p,
+		(ParamFloat<px4::params::MC_THRUST_I>) _param_mc_thrust_i,
+		(ParamFloat<px4::params::MC_TH_INT_LIM>) _param_mc_th_int_lim,
+		(ParamFloat<px4::params::MC_THRUST_FF>) _param_mc_thrust_ff,
+
 		(ParamFloat<px4::params::MC_ROLLRATE_P>) _param_mc_rollrate_p,
 		(ParamFloat<px4::params::MC_ROLLRATE_I>) _param_mc_rollrate_i,
 		(ParamFloat<px4::params::MC_RR_INT_LIM>) _param_mc_rr_int_lim,

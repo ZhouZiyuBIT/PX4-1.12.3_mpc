@@ -134,6 +134,8 @@
 # include "streams/UTM_GLOBAL_POSITION.hpp"
 #endif // !CONSTRAINED_FLASH
 
+#include "streams/QUADROTOR_STATE.hpp"
+
 // ensure PX4 rotation enum and MAV_SENSOR_ROTATION align
 static_assert(MAV_SENSOR_ROTATION_NONE == static_cast<MAV_SENSOR_ORIENTATION>(ROTATION_NONE),
 	      "Roll: 0, Pitch: 0, Yaw: 0");
@@ -535,8 +537,11 @@ static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamComponentInformation>(),
 #endif // COMPONENT_INFORMATION_HPP
 #if defined(RAW_RPM_HPP)
-	create_stream_list_item<MavlinkStreamRawRpm>()
+	create_stream_list_item<MavlinkStreamRawRpm>(),
 #endif // RAW_RPM_HPP
+#if defined(QUADROTOR_STATE_HPP)
+	create_stream_list_item<MavlinkStreamQuadrotorState>()
+#endif
 };
 
 const char *get_stream_name(const uint16_t msg_id)

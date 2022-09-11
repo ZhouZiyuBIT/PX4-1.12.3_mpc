@@ -31,21 +31,11 @@
 #
 ############################################################################
 
-add_subdirectory(RateControl)
-add_subdirectory(ThrustControl)
+px4_add_library(ThrustControl
+	ThrustControl.cpp
+	ThrustControl.hpp
+)
+target_compile_options(ThrustControl PRIVATE ${MAX_CUSTOM_OPT_LEVEL})
+target_include_directories(ThrustControl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(ThrustControl PRIVATE mathlib)
 
-px4_add_module(
-	MODULE modules__mc_rate_control
-	MAIN mc_rate_control
-	COMPILE_FLAGS
-		${MAX_CUSTOM_OPT_LEVEL}
-	SRCS
-		MulticopterRateControl.cpp
-		MulticopterRateControl.hpp
-	DEPENDS
-		circuit_breaker
-		mathlib
-		RateControl
-		ThrustControl
-		px4_work_queue
-	)

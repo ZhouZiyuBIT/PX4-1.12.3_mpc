@@ -257,6 +257,10 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_statustext(msg);
 		break;
 
+	case MAVLINK_MSG_ID_QUADROTOR_CONTROL_INPUT:
+		handle_message_quadrotor_control_input(msg);
+		break;
+
 #if !defined(CONSTRAINED_FLASH)
 
 	case MAVLINK_MSG_ID_NAMED_VALUE_FLOAT:
@@ -360,6 +364,22 @@ MavlinkReceiver::evaluate_target_ok(int command, int target_system, int target_c
 	}
 
 	return target_ok;
+}
+
+void
+MavlinkReceiver::handle_message_quadrotor_control_input(mavlink_message_t *msg)
+{
+	mavlink_quadrotor_control_input_t q_control_input;
+	quadrotor_control_input_s uorb_q_control_input;
+	mavlink_msg_quadrotor_control_input_decode(msg, &q_control_input);
+
+	uorb_q_control_input.timestamp = hrt_absolute_time();
+	uorb_q_control_input.thrust = q_control_input.thrust;
+	uorb_q_control_input.angular_rate_x = q_control_input.Wx;
+	uorb_q_control_input.angular_rate_y = q_control_input.Wy;
+	uorb_q_control_input.angular_rate_z = q_control_input.Wz;
+
+	_quadrotor_control_input_pub.publish(uorb_q_control_input);
 }
 
 void

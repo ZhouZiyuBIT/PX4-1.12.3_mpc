@@ -37,6 +37,7 @@
 #include <circuit_breaker/circuit_breaker.h>
 #include <mathlib/math/Limits.hpp>
 #include <mathlib/math/Functions.hpp>
+#include <lib/ecl/geo/geo.h>
 
 using namespace matrix;
 using namespace time_literals;
@@ -72,6 +73,11 @@ MulticopterRateControl::init()
 void
 MulticopterRateControl::parameters_updated()
 {
+	_thrust_control.setThrustAccelLimit(_param_mc_th_acc_min.get(), _param_mc_th_acc_max.get());
+	_thrust_control.setGains(_param_mc_thrust_p.get(), _param_mc_thrust_i.get(), 0.f);
+	_thrust_control.setFeedForwardGain(_param_mc_thrust_ff.get());
+	_thrust_control.setIntegratorLimit(_param_mc_th_int_lim.get());
+
 	// rate control parameters
 	// The controller gain K is used to convert the parallel (P + I/s + sD) form
 	// to the ideal (K * [1 + 1/sTi + sTd]) form
@@ -117,6 +123,15 @@ MulticopterRateControl::Run()
 		parameters_updated();
 	}
 
+	if(_vehicle_acceleration_sub.updated())
+	{
+		vehicle_acceleration_s vehicle_accel{};
+		_vehicle_acceleration_sub.copy(&vehicle_accel);
+
+		_thrust_accel_est = vehicle_accel.xyz[2];
+	}
+
+
 	/* run controller on gyro changes */
 	vehicle_angular_velocity_s angular_velocity;
 
@@ -160,18 +175,38 @@ MulticopterRateControl::Run()
 		}
 
 		if (_v_control_mode.flag_control_manual_enabled && !_v_control_mode.flag_control_attitude_enabled) {
-			// generate the rate setpoint from sticks
-			manual_control_setpoint_s manual_control_setpoint;
+			// // generate the rate setpoint from sticks
+			// manual_control_setpoint_s manual_control_setpoint;
 
-			if (_manual_control_setpoint_sub.update(&manual_control_setpoint)) {
-				// manual rates control - ACRO mode
-				const Vector3f man_rate_sp{
-					math::superexpo(manual_control_setpoint.y, _param_mc_acro_expo.get(), _param_mc_acro_supexpo.get()),
-					math::superexpo(-manual_control_setpoint.x, _param_mc_acro_expo.get(), _param_mc_acro_supexpo.get()),
-					math::superexpo(manual_control_setpoint.r, _param_mc_acro_expo_y.get(), _param_mc_acro_supexpoy.get())};
+			// if (_manual_control_setpoint_sub.update(&manual_control_setpoint)) {
+			// 	// manual rates control - ACRO mode
+			// 	const Vector3f man_rate_sp{
+			// 		math::superexpo(manual_control_setpoint.y, _param_mc_acro_expo.get(), _param_mc_acro_supexpo.get()),
+			// 		math::superexpo(-manual_control_setpoint.x, _param_mc_acro_expo.get(), _param_mc_acro_supexpo.get()),
+			// 		math::superexpo(manual_control_setpoint.r, _param_mc_acro_expo_y.get(), _param_mc_acro_supexpoy.get())};
 
-				_rates_sp = man_rate_sp.emult(_acro_rate_max);
-				_thrust_sp = math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
+			// 	_rates_sp = man_rate_sp.emult(_acro_rate_max);
+			// 	_thrust_sp = math::constrain(manual_control_setpoint.z, 0.0f, 1.0f);
+
+			// 	// publish rate setpoint
+			// 	vehicle_rates_setpoint_s v_rates_sp{};
+			// 	v_rates_sp.roll = _rates_sp(0);
+			// 	v_rates_sp.pitch = _rates_sp(1);
+			// 	v_rates_sp.yaw = _rates_sp(2);
+			// 	v_rates_sp.thrust_body[0] = 0.0f;
+			// 	v_rates_sp.thrust_body[1] = 0.0f;
+			// 	v_rates_sp.thrust_body[2] = -_thrust_sp;
+			// 	v_rates_sp.timestamp = hrt_absolute_time();
+
+			// 	_v_rates_sp_pub.publish(v_rates_sp);
+			// }
+
+			// generate the rate thrust setpoint from sticks
+			quadrotor_control_input_s control_input;
+			if(_quadrotor_control_input_sub.update(&control_input))
+			{
+				_rates_sp = Vector3f(control_input.angular_rate_x, control_input.angular_rate_y, control_input.angular_rate_z);
+				_thrust_sp = math::constrain(control_input.thrust, 0.0f, 1.0f);
 
 				// publish rate setpoint
 				vehicle_rates_setpoint_s v_rates_sp{};
@@ -182,7 +217,6 @@ MulticopterRateControl::Run()
 				v_rates_sp.thrust_body[1] = 0.0f;
 				v_rates_sp.thrust_body[2] = -_thrust_sp;
 				v_rates_sp.timestamp = hrt_absolute_time();
-
 				_v_rates_sp_pub.publish(v_rates_sp);
 			}
 
@@ -204,6 +238,7 @@ MulticopterRateControl::Run()
 			// reset integral if disarmed
 			if (!_v_control_mode.flag_armed || _vehicle_status.vehicle_type != vehicle_status_s::VEHICLE_TYPE_ROTARY_WING) {
 				_rate_control.resetIntegral();
+				_thrust_control.resetIntegral();
 			}
 
 			// update saturation status from mixer feedback
@@ -221,6 +256,9 @@ MulticopterRateControl::Run()
 			// run rate controller
 			const Vector3f att_control = _rate_control.update(rates, _rates_sp, angular_accel, dt, _maybe_landed || _landed);
 
+			// run thrust controller
+			float out = _thrust_control.update(_thrust_accel_est, _thrust_sp, dt, false);
+
 			// publish rate controller status
 			rate_ctrl_status_s rate_ctrl_status{};
 			_rate_control.getRateControlStatus(rate_ctrl_status);
@@ -232,7 +270,7 @@ MulticopterRateControl::Run()
 			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_sp) ? _thrust_sp : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(out) ? out : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = _landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
 
