@@ -1708,6 +1708,7 @@ Mavlink::configure_streams_to_default(const char *configure_single_stream)
 
 	case MAVLINK_MODE_CONFIG: // USB
 		// Note: streams requiring low latency come first
+		configure_stream_local("SENSOR_IMU", 200.0f);
 		configure_stream_local("QUADROTOR_STATE", 100.0f);
 		// configure_stream_local("TIMESYNC", 10.0f);
 		// configure_stream_local("CAMERA_TRIGGER", unlimited_rate);

@@ -111,6 +111,7 @@
 #include "streams/VFR_HUD.hpp"
 #include "streams/VIBRATION.hpp"
 #include "streams/WIND_COV.hpp"
+#include "streams/SENSOR_IMU.hpp"
 
 #if !defined(CONSTRAINED_FLASH)
 # include "streams/ADSB_VEHICLE.hpp"
@@ -540,7 +541,10 @@ static const StreamListItem streams_list[] = {
 	create_stream_list_item<MavlinkStreamRawRpm>(),
 #endif // RAW_RPM_HPP
 #if defined(QUADROTOR_STATE_HPP)
-	create_stream_list_item<MavlinkStreamQuadrotorState>()
+	create_stream_list_item<MavlinkStreamQuadrotorState>(),
+#endif
+#if defined(SENSOR_IMU_HPP)
+	create_stream_list_item<MavlinkStreamSensorIMU>()
 #endif
 };
 
